@@ -1,0 +1,94 @@
+#cell1
+from google.colab import drive
+drive.mount('/content/drive')
+
+#cell2
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+
+#cell3
+# Create ImageDataGenerator instances
+datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)  # 20% for validation
+
+# Flow from directory for training and validation
+train_generator = datagen.flow_from_directory(
+    dataset_path,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical',
+    subset='training')
+
+validation_generator = datagen.flow_from_directory(
+    dataset_path,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical',
+    subset='validation')
+
+#cell4
+model = models.Sequential([
+    layers.Input(shape=(224, 224, 3)),  # Explicit Input layer
+    layers.Conv2D(32, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(128, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(128, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(512, activation='relu'),
+    layers.Dense(3, activation='softmax')  # 3 categories: fire, normal, smoke
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+#cell5
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // train_generator.batch_size,
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // validation_generator.batch_size,
+    epochs=10  # You can adjust this based on your needs
+)
+
+#cell6
+# Plot training and validation accuracy and loss
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+epochs_range = range(len(acc))
+
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.plot(epochs_range, acc, label='Training Accuracy')
+plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.title('Training and Validation Accuracy')
+
+plt.subplot(1, 2, 2)
+plt.plot(epochs_range, loss, label='Training Loss')
+plt.plot(epochs_range, val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.title('Training and Validation Loss')
+plt.show()
+
+#cell5
+import numpy as np
+from tensorflow.keras.preprocessing import image
+
+# Load a test image
+img_path = '/content/testimg.PNG'  # Example path
+img = image.load_img(img_path, target_size=(224, 224))
+img_array = image.img_to_array(img)
+img_array = np.expand_dims(img_array, axis=0) / 255.0
+
+# Predict
+predictions = model.predict(img_array)
+predicted_class = np.argmax(predictions)
+print("Predicted class:", predicted_class)
+
